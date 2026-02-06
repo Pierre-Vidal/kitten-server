@@ -2,7 +2,6 @@ package com.kitten.kitten_server.controller;
 
 import java.util.List;
 
-import org.springframework.messaging.MessageHeaders;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessageType;
@@ -34,7 +33,7 @@ public class RoomController {
 		Room room = roomManager.createRoom(host);
 
 		RoomEvent event = new RoomEvent(EventType.ROOM_CREATED, toResponse(room), toPlayerInfo(host));
-		messagingTemplate.convertAndSendToUser(sessionId, "/queue/room", event, createHeaders(sessionId));
+		sendToSession(sessionId, "/queue/room", event);
 		broadcastToRoom(room.getCode(), event);
 	}
 
@@ -67,10 +66,10 @@ public class RoomController {
 		messagingTemplate.convertAndSend("/topic/room/" + roomCode, event);
 	}
 
-	private MessageHeaders createHeaders(String sessionId) {
+	private void sendToSession(String sessionId, String destination, Object payload) {
 		SimpMessageHeaderAccessor accessor = SimpMessageHeaderAccessor.create(SimpMessageType.MESSAGE);
 		accessor.setSessionId(sessionId);
-		return accessor.getMessageHeaders();
+		messagingTemplate.convertAndSendToUser(sessionId, destination, payload, accessor.getMessageHeaders());
 	}
 
 	private RoomResponse toResponse(Room room) {
