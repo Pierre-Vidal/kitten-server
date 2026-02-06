@@ -10,7 +10,9 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 
 import com.kitten.kitten_server.dto.CreateRoomRequest;
+import com.kitten.kitten_server.dto.EventType;
 import com.kitten.kitten_server.dto.JoinRoomRequest;
+import com.kitten.kitten_server.dto.RoomEvent;
 import com.kitten.kitten_server.dto.RoomResponse;
 import com.kitten.kitten_server.model.Player;
 import com.kitten.kitten_server.model.Room;
@@ -31,9 +33,9 @@ public class RoomController {
 		Player host = new Player(request.getUsername(), sessionId);
 		Room room = roomManager.createRoom(host);
 
-		RoomResponse response = toResponse(room);
-		messagingTemplate.convertAndSendToUser(sessionId, "/queue/room", response, createHeaders(sessionId));
-		messagingTemplate.convertAndSend("/topic/room/" + room.getCode(), response);
+		RoomEvent event = new RoomEvent(EventType.ROOM_CREATED, toResponse(room), toPlayerInfo(host));
+		messagingTemplate.convertAndSendToUser(sessionId, "/queue/room", event, createHeaders(sessionId));
+		broadcastToRoom(room.getCode(), event);
 	}
 
 	@MessageMapping("/room/join")
@@ -42,17 +44,27 @@ public class RoomController {
 		Player player = new Player(request.getUsername(), sessionId);
 		Room room = roomManager.joinRoom(request.getCode(), player);
 
-		messagingTemplate.convertAndSend("/topic/room/" + room.getCode(), toResponse(room));
+		broadcastToRoom(room.getCode(), new RoomEvent(EventType.PLAYER_JOINED, toResponse(room), toPlayerInfo(player)));
 	}
 
 	@MessageMapping("/room/leave")
 	public void leaveRoom(JoinRoomRequest request, SimpMessageHeaderAccessor headerAccessor) {
 		String sessionId = headerAccessor.getSessionId();
+		String oldHostId = roomManager.getRoom(request.getCode()).getHostId();
 		Room room = roomManager.leaveRoom(request.getCode(), sessionId);
 
 		if (room != null) {
-			messagingTemplate.convertAndSend("/topic/room/" + room.getCode(), toResponse(room));
+			RoomResponse response = toResponse(room);
+			broadcastToRoom(room.getCode(), new RoomEvent(EventType.PLAYER_LEFT, response, sessionId));
+
+			if (!oldHostId.equals(room.getHostId())) {
+				broadcastToRoom(room.getCode(), new RoomEvent(EventType.HOST_CHANGED, response, room.getHostId()));
+			}
 		}
+	}
+
+	private void broadcastToRoom(String roomCode, RoomEvent event) {
+		messagingTemplate.convertAndSend("/topic/room/" + roomCode, event);
 	}
 
 	private MessageHeaders createHeaders(String sessionId) {
@@ -63,8 +75,12 @@ public class RoomController {
 
 	private RoomResponse toResponse(Room room) {
 		List<RoomResponse.PlayerInfo> players = room.getPlayers().values().stream()
-				.map(p -> new RoomResponse.PlayerInfo(p.getId(), p.getUsername(), p.isHost()))
+				.map(this::toPlayerInfo)
 				.toList();
 		return new RoomResponse(room.getCode(), players, room.getHostId());
+	}
+
+	private RoomResponse.PlayerInfo toPlayerInfo(Player player) {
+		return new RoomResponse.PlayerInfo(player.getId(), player.getUsername(), player.isHost());
 	}
 }

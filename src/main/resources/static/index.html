@@ -113,8 +113,9 @@
             currentRoomCode = code;
             document.getElementById('roomCode').value = code;
             roomSubscription = stompClient.subscribe('/topic/room/' + code, function (message) {
-                const data = JSON.parse(message.body);
-                log('Room ' + data.code + ' | Joueurs: ' + data.players.map(p => p.username + (p.host ? ' (host)' : '')).join(', '), 'receive');
+                const event = JSON.parse(message.body);
+                const players = event.room.players.map(p => p.username + (p.host ? ' (host)' : '')).join(', ');
+                log('[' + event.type + '] Joueurs: ' + players, 'receive');
             });
         }
 
@@ -124,9 +125,9 @@
 
             // S'abonner a un topic temporaire pour recevoir la reponse
             const tempSub = stompClient.subscribe('/user/queue/room', function (message) {
-                const data = JSON.parse(message.body);
-                log('Room creee: ' + data.code, 'receive');
-                subscribeToRoom(data.code);
+                const event = JSON.parse(message.body);
+                log('Room creee: ' + event.room.code, 'receive');
+                subscribeToRoom(event.room.code);
                 tempSub.unsubscribe();
             });
 
