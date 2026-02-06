@@ -3,6 +3,9 @@ package com.kitten.kitten_server.model;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import lombok.Getter;
+
+@Getter
 public class Room {
 
 	private final String code;
@@ -35,21 +38,5 @@ public class Room {
 
 	public int getPlayerCount() {
 		return players.size();
-	}
-
-	public String getCode() {
-		return code;
-	}
-
-	public Map<String, Player> getPlayers() {
-		return players;
-	}
-
-	public String getHostId() {
-		return hostId;
-	}
-
-	public Map<String, Object> getState() {
-		return state;
 	}
 }
