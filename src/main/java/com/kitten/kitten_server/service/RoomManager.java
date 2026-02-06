@@ -17,12 +17,14 @@ public class RoomManager {
 	private static final SecureRandom RANDOM = new SecureRandom();
 
 	private final Map<String, Room> rooms = new ConcurrentHashMap<>();
+	private final Map<String, String> sessionToRoom = new ConcurrentHashMap<>();
 
 	public Room createRoom(Player host) {
 		String code = generateCode();
 		Room room = new Room(code);
 		room.addPlayer(host);
 		rooms.put(code, room);
+		sessionToRoom.put(host.getSessionId(), code);
 		return room;
 	}
 
@@ -32,6 +34,7 @@ public class RoomManager {
 			throw new IllegalArgumentException("Room not found: " + code);
 		}
 		room.addPlayer(player);
+		sessionToRoom.put(player.getSessionId(), code);
 		return room;
 	}
 
@@ -41,6 +44,7 @@ public class RoomManager {
 			throw new IllegalArgumentException("Room not found: " + code);
 		}
 		room.removePlayer(sessionId);
+		sessionToRoom.remove(sessionId);
 		if (room.getPlayerCount() == 0) {
 			rooms.remove(code);
 			return null;
@@ -50,6 +54,10 @@ public class RoomManager {
 
 	public Room getRoom(String code) {
 		return rooms.get(code);
+	}
+
+	public String getRoomCodeBySession(String sessionId) {
+		return sessionToRoom.get(sessionId);
 	}
 
 	private String generateCode() {
