@@ -85,7 +85,7 @@
         }
 
         function connect() {
-            const ws = new WebSocket('ws://localhost:8080/ws');
+            const ws = new WebSocket('ws://localhost:9999/ws');
             stompClient = Stomp.over(ws);
             stompClient.connect({}, function () {
                 setConnected(true);
