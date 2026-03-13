@@ -16,6 +16,10 @@ import com.kitten.kitten_server.service.RoomManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * Écoute les déconnexions WebSocket et nettoie la room concernée
+ * Déclenche les mêmes events qu'un leave manuel (PLAYER_LEFT, HOST_CHANGED si besoin)
+ */
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -29,6 +33,7 @@ public class WebSocketEventListener {
 		String sessionId = event.getSessionId();
 		String roomCode = roomManager.getRoomCodeBySession(sessionId);
 
+		// le joueur n'était dans aucune room, rien à faire
 		if (roomCode == null) {
 			return;
 		}
@@ -42,6 +47,7 @@ public class WebSocketEventListener {
 			messagingTemplate.convertAndSend("/topic/room/" + roomCode,
 					new RoomEvent(EventType.PLAYER_LEFT, response, sessionId));
 
+			// si l'hôte est parti, on notifie le changement
 			if (!oldHostId.equals(room.getHostId())) {
 				messagingTemplate.convertAndSend("/topic/room/" + roomCode,
 						new RoomEvent(EventType.HOST_CHANGED, response, room.getHostId()));

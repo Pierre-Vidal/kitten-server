@@ -20,6 +20,10 @@ import com.kitten.kitten_server.service.RoomManager;
 
 import lombok.RequiredArgsConstructor;
 
+/**
+ * Contrôleur WebSocket qui gère les actions sur les rooms
+ * Chaque méthode correspond à un message STOMP envoyé par le client
+ */
 @Controller
 @RequiredArgsConstructor
 public class RoomController {
@@ -27,6 +31,10 @@ public class RoomController {
 	private final RoomManager roomManager;
 	private final SimpMessagingTemplate messagingTemplate;
 
+	/**
+	 * Crée une room et notifie le créateur via sa queue personnelle
+	 * On envoie aussi un broadcast à la room pour que les autres soient au courant
+	 */
 	@MessageMapping("/room/create")
 	public void createRoom(CreateRoomRequest request, SimpMessageHeaderAccessor headerAccessor) {
 		String sessionId = headerAccessor.getSessionId();
@@ -38,6 +46,9 @@ public class RoomController {
 		broadcastToRoom(room.getCode(), event);
 	}
 
+	/**
+	 * Fait rejoindre un joueur et broadcast l'info à toute la room
+	 */
 	@MessageMapping("/room/join")
 	public void joinRoom(JoinRoomRequest request, SimpMessageHeaderAccessor headerAccessor) {
 		String sessionId = headerAccessor.getSessionId();
@@ -47,6 +58,10 @@ public class RoomController {
 		broadcastToRoom(room.getCode(), new RoomEvent(EventType.PLAYER_JOINED, toResponse(room), toPlayerInfo(player)));
 	}
 
+	/**
+	 * Retire un joueur de la room
+	 * Si l'hôte est parti, un second event HOST_CHANGED est broadcasté
+	 */
 	@MessageMapping("/room/leave")
 	public void leaveRoom(JoinRoomRequest request, SimpMessageHeaderAccessor headerAccessor) {
 		String sessionId = headerAccessor.getSessionId();
@@ -63,6 +78,10 @@ public class RoomController {
 		}
 	}
 
+	/**
+	 * Met à jour l'état de la room et le broadcast à tous les joueurs
+	 * Ne fait rien si la room n'existe plus
+	 */
 	@MessageMapping("/room/state")
 	public void updateState(StateUpdateRequest request, SimpMessageHeaderAccessor headerAccessor) {
 		Room room = roomManager.getRoom(request.getCode());
@@ -73,10 +92,15 @@ public class RoomController {
 		broadcastToRoom(room.getCode(), new RoomEvent(EventType.STATE_UPDATED, toResponse(room), request.getState()));
 	}
 
+	/** Envoie un message à tous les joueurs de la room */
 	private void broadcastToRoom(String roomCode, RoomEvent event) {
 		messagingTemplate.convertAndSend("/topic/room/" + roomCode, event);
 	}
 
+	/**
+	 * Envoie un message directement à une session spécifique
+	 * On doit forcer le sessionId dans les headers car il n'y a pas d'authentification
+	 */
 	private void sendToSession(String sessionId, String destination, Object payload) {
 		SimpMessageHeaderAccessor accessor = SimpMessageHeaderAccessor.create(SimpMessageType.MESSAGE);
 		accessor.setSessionId(sessionId);
