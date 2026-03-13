@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KITTEN - Test WebSocket</title>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: monospace; background: #1a1a2e; color: #e0e0e0; padding: 20px; }
+        h1 { color: #e94560; margin-bottom: 20px; }
+        h2 { color: #0f3460; background: #e94560; padding: 8px 12px; margin-bottom: 10px; }
+        .container { display: flex; gap: 20px; flex-wrap: wrap; }
+        .panel { background: #16213e; border: 1px solid #0f3460; padding: 15px; width: 350px; }
+        label { display: block; margin: 8px 0 4px; color: #a0a0a0; }
+        input { width: 100%; padding: 8px; background: #1a1a2e; border: 1px solid #0f3460; color: #e0e0e0; font-family: monospace; }
+        button { padding: 8px 16px; margin: 8px 4px 0 0; border: none; cursor: pointer; font-family: monospace; font-weight: bold; }
+        .btn-connect { background: #4ecca3; color: #1a1a2e; }
+        .btn-disconnect { background: #e94560; color: white; }
+        .btn-action { background: #0f3460; color: white; }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        #log { background: #0d1117; border: 1px solid #0f3460; padding: 10px; height: 300px; overflow-y: auto; font-size: 12px; white-space: pre-wrap; margin-top: 10px; }
+        .log-info { color: #4ecca3; }
+        .log-send { color: #e9c46a; }
+        .log-receive { color: #48cae4; }
+        .log-error { color: #e94560; }
+        .status { padding: 4px 8px; font-size: 12px; margin-bottom: 10px; }
+        .status.connected { background: #4ecca3; color: #1a1a2e; }
+        .status.disconnected { background: #e94560; color: white; }
+    </style>
+</head>
+<body>
+    <h1>KITTEN - Test WebSocket</h1>
+    <div class="container">
+        <div class="panel">
+            <h2>Connexion</h2>
+            <div id="status" class="status disconnected">Deconnecte</div>
+            <label>Username</label>
+            <input type="text" id="username" value="Player1">
+            <div>
+                <button class="btn-connect" id="btnConnect" onclick="connect()">Connecter</button>
+                <button class="btn-disconnect" id="btnDisconnect" onclick="disconnect()" disabled>Deconnecter</button>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h2>Room</h2>
+            <label>Code de la room</label>
+            <input type="text" id="roomCode" placeholder="Ex: ABCDEF">
+            <div>
+                <button class="btn-action" id="btnCreate" onclick="createRoom()" disabled>Creer Room</button>
+                <button class="btn-action" id="btnJoin" onclick="joinRoom()" disabled>Rejoindre</button>
+                <button class="btn-action" id="btnLeave" onclick="leaveRoom()" disabled>Quitter</button>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h2>State</h2>
+            <label>JSON a envoyer</label>
+            <input type="text" id="stateInput" placeholder='{"score": 10, "round": 1}'>
+            <div>
+                <button class="btn-action" id="btnState" onclick="sendState()" disabled>Envoyer State</button>
+            </div>
+        </div>
+
+        <div class="panel" style="width: 100%; max-width: 720px;">
+            <h2>Log</h2>
+            <div id="log"></div>
+            <button class="btn-action" onclick="document.getElementById('log').innerHTML=''" style="margin-top:8px">Vider</button>
+        </div>
+    </div>
+
+    <script>
+        let stompClient = null;
+        let currentRoomCode = null;
+        let roomSubscription = null;
+
+        function log(msg, type = 'info') {
+            const el = document.getElementById('log');
+            const time = new Date().toLocaleTimeString();
+            el.innerHTML += `<span class="log-${type}">[${time}] ${msg}</span>\n`;
+            el.scrollTop = el.scrollHeight;
+        }
+
+        function setConnected(connected) {
+            document.getElementById('btnConnect').disabled = connected;
+            document.getElementById('btnDisconnect').disabled = !connected;
+            document.getElementById('btnCreate').disabled = !connected;
+            document.getElementById('btnJoin').disabled = !connected;
+            document.getElementById('btnLeave').disabled = !connected;
+            document.getElementById('btnState').disabled = !connected;
+            const status = document.getElementById('status');
+            status.className = 'status ' + (connected ? 'connected' : 'disconnected');
+            status.textContent = connected ? 'Connecte' : 'Deconnecte';
+        }
+
+        function connect() {
+            const ws = new WebSocket('ws://localhost:9999/ws');
+            stompClient = Stomp.over(ws);
+            stompClient.connect({}, function () {
+                setConnected(true);
+                log('Connecte au serveur', 'info');
+            }, function (error) {
+                log('Erreur: ' + error, 'error');
+                setConnected(false);
+            });
+        }
+
+        function disconnect() {
+            if (stompClient) {
+                stompClient.disconnect(function () {
+                    log('Deconnecte', 'info');
+                    setConnected(false);
+                    currentRoomCode = null;
+                });
+            }
+        }
+
+        function subscribeToRoom(code) {
+            if (roomSubscription) {
+                roomSubscription.unsubscribe();
+            }
+            currentRoomCode = code;
+            document.getElementById('roomCode').value = code;
+            roomSubscription = stompClient.subscribe('/topic/room/' + code, function (message) {
+                const event = JSON.parse(message.body);
+                const players = event.room.players.map(p => p.username + (p.host ? ' (host)' : '')).join(', ');
+                let msg = '[' + event.type + '] Joueurs: ' + players;
+                if (event.type === 'STATE_UPDATED') {
+                    msg += ' | State: ' + JSON.stringify(event.data);
+                }
+                log(msg, 'receive');
+            });
+        }
+
+        function createRoom() {
+            const username = document.getElementById('username').value;
+            log('Creation de room par ' + username + '...', 'send');
+
+            // S'abonner a un topic temporaire pour recevoir la reponse
+            const tempSub = stompClient.subscribe('/user/queue/room', function (message) {
+                const event = JSON.parse(message.body);
+                log('Room creee: ' + event.room.code, 'receive');
+                subscribeToRoom(event.room.code);
+                tempSub.unsubscribe();
+            });
+
+            stompClient.send('/app/room/create', {}, JSON.stringify({ username: username }));
+        }
+
+        function joinRoom() {
+            const code = document.getElementById('roomCode').value.toUpperCase();
+            const username = document.getElementById('username').value;
+            if (!code) { log('Entre un code de room', 'error'); return; }
+            log('Rejoint la room ' + code + '...', 'send');
+            subscribeToRoom(code);
+            stompClient.send('/app/room/join', {}, JSON.stringify({ code: code, username: username }));
+        }
+
+        function sendState() {
+            if (!currentRoomCode) { log('Pas dans une room', 'error'); return; }
+            const input = document.getElementById('stateInput').value;
+            try {
+                const state = JSON.parse(input);
+                log('Envoi state: ' + input, 'send');
+                stompClient.send('/app/room/state', {}, JSON.stringify({ code: currentRoomCode, state: state }));
+            } catch (e) {
+                log('JSON invalide', 'error');
+            }
+        }
+
+        function leaveRoom() {
+            if (!currentRoomCode) { log('Pas dans une room', 'error'); return; }
+            log('Quitte la room ' + currentRoomCode + '...', 'send');
+            stompClient.send('/app/room/leave', {}, JSON.stringify({ code: currentRoomCode }));
+            if (roomSubscription) {
+                roomSubscription.unsubscribe();
+                roomSubscription = null;
+            }
+            currentRoomCode = null;
+        }
+    </script>
+</body>
+</html>
