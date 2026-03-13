@@ -36,6 +36,10 @@ public class Room {
 		}
 	}
 
+	public void updateState(Map<String, Object> newState) {
+		state.putAll(newState);
+	}
+
 	public int getPlayerCount() {
 		return players.size();
 	}

@@ -54,6 +54,15 @@
             </div>
         </div>
 
+        <div class="panel">
+            <h2>State</h2>
+            <label>JSON a envoyer</label>
+            <input type="text" id="stateInput" placeholder='{"score": 10, "round": 1}'>
+            <div>
+                <button class="btn-action" id="btnState" onclick="sendState()" disabled>Envoyer State</button>
+            </div>
+        </div>
+
         <div class="panel" style="width: 100%; max-width: 720px;">
             <h2>Log</h2>
             <div id="log"></div>
@@ -79,6 +88,7 @@
             document.getElementById('btnCreate').disabled = !connected;
             document.getElementById('btnJoin').disabled = !connected;
             document.getElementById('btnLeave').disabled = !connected;
+            document.getElementById('btnState').disabled = !connected;
             const status = document.getElementById('status');
             status.className = 'status ' + (connected ? 'connected' : 'disconnected');
             status.textContent = connected ? 'Connecte' : 'Deconnecte';
@@ -115,7 +125,11 @@
             roomSubscription = stompClient.subscribe('/topic/room/' + code, function (message) {
                 const event = JSON.parse(message.body);
                 const players = event.room.players.map(p => p.username + (p.host ? ' (host)' : '')).join(', ');
-                log('[' + event.type + '] Joueurs: ' + players, 'receive');
+                let msg = '[' + event.type + '] Joueurs: ' + players;
+                if (event.type === 'STATE_UPDATED') {
+                    msg += ' | State: ' + JSON.stringify(event.data);
+                }
+                log(msg, 'receive');
             });
         }
 
@@ -141,6 +155,18 @@
             log('Rejoint la room ' + code + '...', 'send');
             subscribeToRoom(code);
             stompClient.send('/app/room/join', {}, JSON.stringify({ code: code, username: username }));
+        }
+
+        function sendState() {
+            if (!currentRoomCode) { log('Pas dans une room', 'error'); return; }
+            const input = document.getElementById('stateInput').value;
+            try {
+                const state = JSON.parse(input);
+                log('Envoi state: ' + input, 'send');
+                stompClient.send('/app/room/state', {}, JSON.stringify({ code: currentRoomCode, state: state }));
+            } catch (e) {
+                log('JSON invalide', 'error');
+            }
         }
 
         function leaveRoom() {

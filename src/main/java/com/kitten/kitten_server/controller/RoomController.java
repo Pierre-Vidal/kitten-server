@@ -13,6 +13,7 @@ import com.kitten.kitten_server.dto.EventType;
 import com.kitten.kitten_server.dto.JoinRoomRequest;
 import com.kitten.kitten_server.dto.RoomEvent;
 import com.kitten.kitten_server.dto.RoomResponse;
+import com.kitten.kitten_server.dto.StateUpdateRequest;
 import com.kitten.kitten_server.model.Player;
 import com.kitten.kitten_server.model.Room;
 import com.kitten.kitten_server.service.RoomManager;
@@ -62,6 +63,16 @@ public class RoomController {
 		}
 	}
 
+	@MessageMapping("/room/state")
+	public void updateState(StateUpdateRequest request, SimpMessageHeaderAccessor headerAccessor) {
+		Room room = roomManager.getRoom(request.getCode());
+		if (room == null) {
+			return;
+		}
+		room.updateState(request.getState());
+		broadcastToRoom(room.getCode(), new RoomEvent(EventType.STATE_UPDATED, toResponse(room), request.getState()));
+	}
+
 	private void broadcastToRoom(String roomCode, RoomEvent event) {
 		messagingTemplate.convertAndSend("/topic/room/" + roomCode, event);
 	}
@@ -76,7 +87,7 @@ public class RoomController {
 		List<RoomResponse.PlayerInfo> players = room.getPlayers().values().stream()
 				.map(this::toPlayerInfo)
 				.toList();
-		return new RoomResponse(room.getCode(), players, room.getHostId());
+		return new RoomResponse(room.getCode(), players, room.getHostId(), room.getState());
 	}
 
 	private RoomResponse.PlayerInfo toPlayerInfo(Player player) {
