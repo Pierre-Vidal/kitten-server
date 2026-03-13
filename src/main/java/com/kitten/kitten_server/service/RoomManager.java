@@ -60,6 +60,10 @@ public class RoomManager {
 		return sessionToRoom.get(sessionId);
 	}
 
+	public Map<String, Room> getRooms() {
+		return rooms;
+	}
+
 	private String generateCode() {
 		String code;
 		do {
