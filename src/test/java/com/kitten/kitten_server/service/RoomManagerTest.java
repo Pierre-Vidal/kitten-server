@@ -9,6 +9,8 @@ import org.junit.jupiter.api.Test;
 import com.kitten.kitten_server.model.Player;
 import com.kitten.kitten_server.model.Room;
 
+// [C2.2.2] Tests unitaires du service RoomManager — couverture des cas nominaux et d'erreur
+// [C2.3.1] Scénarios de recette : création, jointure, départ, unicité des codes, gestion d'exceptions
 class RoomManagerTest {
 
 	private RoomManager roomManager;

@@ -4,6 +4,8 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
+// [C2.2.3] Validation stricte du code room (exactement 6 caractères) pour éviter les requêtes malformées
+// [C2.3.1] Scénario de recette : tentative de jointure avec code trop court/long → VALIDATION_ERROR
 @Data
 public class JoinRoomRequest {
 

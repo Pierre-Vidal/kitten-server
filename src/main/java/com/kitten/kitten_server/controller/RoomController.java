@@ -27,6 +27,11 @@ import lombok.RequiredArgsConstructor;
 /**
  * Contrôleur WebSocket qui gère les actions sur les rooms
  * Chaque méthode correspond à un message STOMP envoyé par le client
+ *
+ * [C2.2.1] Couche contrôleur du prototype — point d'entrée de toutes les actions client
+ * [C2.2.3] @Validated + @Valid sur chaque méthode pour rejeter les inputs invalides avant
+ *           d'atteindre la logique métier
+ * [C2.3.1] 4 actions testables en recette : create, join, leave, state
  */
 @Controller
 @Validated

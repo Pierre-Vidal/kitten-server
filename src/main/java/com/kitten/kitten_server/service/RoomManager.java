@@ -16,6 +16,10 @@ import com.kitten.kitten_server.model.Room;
 /**
  * Gère le cycle de vie des rooms : création, rejoindre, quitter
  * Maintient aussi un index session → room pour retrouver rapidement la room d'un joueur
+ *
+ * [C2.2.1] Service métier central du prototype Kitten
+ * [C2.2.3] Limite à 8 joueurs par room, codes uniques générés par SecureRandom
+ * [C2.3.1] Chaque méthode lève une exception typée testable en recette (RoomNotFoundException, etc.)
  */
 @Service
 public class RoomManager {

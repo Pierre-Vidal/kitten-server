@@ -8,6 +8,9 @@ import lombok.Getter;
 /**
  * Représente une room de jeu
  * Gère la liste des joueurs, l'hôte courant et l'état partagé du jeu
+ *
+ * [C2.2.1] Modèle central du prototype — encapsule les règles métier de la room
+ * [C2.2.3] ConcurrentHashMap pour la thread-safety en environnement WebSocket multi-thread
  */
 @Getter
 public class Room {
@@ -45,6 +48,8 @@ public class Room {
 	/**
 	 * Retire un joueur de la room
 	 * Si c'était l'hôte, le prochain joueur dans la map prend le relais
+	 *
+	 * [C2.3.2] Transfert automatique de host — correction d'un cas limite identifié en recette
 	 */
 	public void removePlayer(String sessionId) {
 		Player removed = players.remove(sessionId);

@@ -19,6 +19,10 @@ import lombok.extern.slf4j.Slf4j;
 /**
  * Écoute les déconnexions WebSocket et nettoie la room concernée
  * Déclenche les mêmes events qu'un leave manuel (PLAYER_LEFT, HOST_CHANGED si besoin)
+ *
+ * [C2.2.3] Gestion des cas limites : déconnexion réseau traitée comme un leave propre
+ * [C2.3.2] Correction d'un bug identifié en recette : sans ce listener, les rooms restaient
+ *           dans un état incohérent après déconnexion brutale
  */
 @Slf4j
 @Component

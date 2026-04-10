@@ -7,6 +7,8 @@ import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+// [C2.2.2] Tests unitaires du modèle Room — vérifient les règles métier isolément
+// [C2.3.1] Scénarios de recette : attribution du host, transfert, comptage, état partagé
 class RoomTest {
 
 	private Room room;

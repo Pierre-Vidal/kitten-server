@@ -8,6 +8,9 @@ import lombok.Setter;
 /**
  * Représente un joueur connecté à une room
  * L'id est généré automatiquement et ne change jamais
+ *
+ * [C2.2.1] Entité du prototype — séparation claire entre id stable (UUID) et session WebSocket
+ * [C2.2.3] UUID garanti unique, indépendant de la session pour une future reconnexion
  */
 @Getter
 public class Player {

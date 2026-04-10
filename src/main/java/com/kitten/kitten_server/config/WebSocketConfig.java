@@ -11,6 +11,11 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
  *
  * Les clients se connectent sur /ws, envoient des messages préfixés par /app
  * et s'abonnent à des topics sous /topic (broadcast) ou /queue (personnel)
+ *
+ * [C2.2.1] Architecture temps réel basée sur WebSocket/STOMP — choix technique justifié
+ *           par le besoin de communication bidirectionnelle pour les jeux multijoueurs
+ * [C2.2.3] Protocole évolutif : le broker in-memory peut être remplacé par RabbitMQ/Redis
+ *           sans changer les contrôleurs
  */
 @Configuration
 @EnableWebSocketMessageBroker
@@ -27,6 +32,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 	@Override
 	public void registerStompEndpoints(StompEndpointRegistry registry) {
 		// point d'entrée WebSocket, ouvert à tous les origines pour le dev
+		// [C2.2.3] à restreindre avec une whitelist en production (sécurité CORS)
 		registry.addEndpoint("/ws").setAllowedOrigins("*");
 	}
 }

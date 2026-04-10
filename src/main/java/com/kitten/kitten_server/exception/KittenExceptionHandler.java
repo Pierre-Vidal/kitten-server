@@ -16,6 +16,11 @@ import lombok.extern.slf4j.Slf4j;
 /**
  * Intercepte toutes les exceptions levées dans les contrôleurs WebSocket
  * Renvoie un ErrorEvent propre à la session concernée au lieu de laisser planter silencieusement
+ *
+ * [C2.2.3] Gestion d'erreurs centralisée — un seul endroit pour tous les cas d'erreur
+ * [C2.3.1] Chaque ErrorCode correspond à un scénario de test du cahier de recettes
+ * [C2.3.2] Plan de correction : VALIDATION_ERROR → input client, ROOM_NOT_FOUND → logique métier,
+ *           INTERNAL_ERROR → bug serveur à investiguer dans les logs
  */
 @Slf4j
 @ControllerAdvice

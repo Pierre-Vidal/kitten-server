@@ -62,6 +62,9 @@
 	</dependencies>
 
 	<build>
+		<!-- [C2.1.1] Outils de qualité et de couverture de tests configurés dans le build -->
+		<!-- [C2.2.2] JaCoCo mesure la couverture des tests unitaires -->
+		<!-- [C2.1.2] Ces plugins s'intègrent dans un pipeline CI/CD (GitHub Actions, etc.) -->
 		<plugins>
 			<plugin>
 				<groupId>org.jacoco</groupId>

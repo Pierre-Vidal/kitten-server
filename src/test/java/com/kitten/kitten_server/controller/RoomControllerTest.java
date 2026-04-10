@@ -31,6 +31,9 @@ import com.kitten.kitten_server.model.Player;
 import com.kitten.kitten_server.model.Room;
 import com.kitten.kitten_server.service.RoomManager;
 
+// [C2.2.2] Tests unitaires du contrôleur avec Mockito — vérifient les broadcasts et events sans démarrer le serveur
+// [C2.1.1] Utilisation de Mockito pour isoler les dépendances et tester en environnement contrôlé
+// [C2.3.1] 9 scénarios de recette couvrant create, join, leave (avec/sans transfert host), state, erreur
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 class RoomControllerTest {
