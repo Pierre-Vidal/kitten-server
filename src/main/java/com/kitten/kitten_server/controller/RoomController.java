@@ -7,10 +7,14 @@ import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessageType;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
+import org.springframework.validation.annotation.Validated;
+
+import jakarta.validation.Valid;
 
 import com.kitten.kitten_server.dto.CreateRoomRequest;
 import com.kitten.kitten_server.dto.EventType;
 import com.kitten.kitten_server.dto.JoinRoomRequest;
+import com.kitten.kitten_server.dto.LeaveRoomRequest;
 import com.kitten.kitten_server.dto.RoomEvent;
 import com.kitten.kitten_server.dto.RoomResponse;
 import com.kitten.kitten_server.dto.StateUpdateRequest;
@@ -21,6 +25,7 @@ import com.kitten.kitten_server.service.RoomManager;
 import lombok.RequiredArgsConstructor;
 
 @Controller
+@Validated
 @RequiredArgsConstructor
 public class RoomController {
 
@@ -28,7 +33,7 @@ public class RoomController {
 	private final SimpMessagingTemplate messagingTemplate;
 
 	@MessageMapping("/room/create")
-	public void createRoom(CreateRoomRequest request, SimpMessageHeaderAccessor headerAccessor) {
+	public void createRoom(@Valid CreateRoomRequest request, SimpMessageHeaderAccessor headerAccessor) {
 		String sessionId = headerAccessor.getSessionId();
 		Player host = new Player(request.getUsername(), sessionId);
 		Room room = roomManager.createRoom(host);
@@ -39,7 +44,7 @@ public class RoomController {
 	}
 
 	@MessageMapping("/room/join")
-	public void joinRoom(JoinRoomRequest request, SimpMessageHeaderAccessor headerAccessor) {
+	public void joinRoom(@Valid JoinRoomRequest request, SimpMessageHeaderAccessor headerAccessor) {
 		String sessionId = headerAccessor.getSessionId();
 		Player player = new Player(request.getUsername(), sessionId);
 		Room room = roomManager.joinRoom(request.getCode(), player);
@@ -48,23 +53,24 @@ public class RoomController {
 	}
 
 	@MessageMapping("/room/leave")
-	public void leaveRoom(JoinRoomRequest request, SimpMessageHeaderAccessor headerAccessor) {
+	public void leaveRoom(@Valid LeaveRoomRequest request, SimpMessageHeaderAccessor headerAccessor) {
 		String sessionId = headerAccessor.getSessionId();
-		String oldHostId = roomManager.getRoom(request.getCode()).getHostId();
+		Room currentRoom = roomManager.getRoom(request.getCode());
+		String oldHostId = currentRoom != null ? currentRoom.getHostId() : null;
 		Room room = roomManager.leaveRoom(request.getCode(), sessionId);
 
 		if (room != null) {
 			RoomResponse response = toResponse(room);
 			broadcastToRoom(room.getCode(), new RoomEvent(EventType.PLAYER_LEFT, response, sessionId));
 
-			if (!oldHostId.equals(room.getHostId())) {
+			if (oldHostId != null && !oldHostId.equals(room.getHostId())) {
 				broadcastToRoom(room.getCode(), new RoomEvent(EventType.HOST_CHANGED, response, room.getHostId()));
 			}
 		}
 	}
 
 	@MessageMapping("/room/state")
-	public void updateState(StateUpdateRequest request, SimpMessageHeaderAccessor headerAccessor) {
+	public void updateState(@Valid StateUpdateRequest request, SimpMessageHeaderAccessor headerAccessor) {
 		Room room = roomManager.getRoom(request.getCode());
 		if (room == null) {
 			return;

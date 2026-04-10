@@ -24,6 +24,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import com.kitten.kitten_server.dto.CreateRoomRequest;
 import com.kitten.kitten_server.dto.EventType;
 import com.kitten.kitten_server.dto.JoinRoomRequest;
+import com.kitten.kitten_server.dto.LeaveRoomRequest;
 import com.kitten.kitten_server.dto.RoomEvent;
 import com.kitten.kitten_server.dto.StateUpdateRequest;
 import com.kitten.kitten_server.model.Player;
@@ -112,7 +113,7 @@ class RoomControllerTest {
 			return room;
 		});
 
-		JoinRoomRequest request = new JoinRoomRequest();
+		LeaveRoomRequest request = new LeaveRoomRequest();
 		request.setCode("ABCDEF");
 		roomController.leaveRoom(request, headerAccessor);
 
@@ -131,7 +132,7 @@ class RoomControllerTest {
 			return room;
 		});
 
-		JoinRoomRequest request = new JoinRoomRequest();
+		LeaveRoomRequest request = new LeaveRoomRequest();
 		request.setCode("ABCDEF");
 		roomController.leaveRoom(request, headerAccessor);
 
@@ -149,7 +150,7 @@ class RoomControllerTest {
 			return room;
 		});
 
-		JoinRoomRequest request = new JoinRoomRequest();
+		LeaveRoomRequest request = new LeaveRoomRequest();
 		request.setCode("ABCDEF");
 		roomController.leaveRoom(request, headerAccessor);
 
@@ -161,7 +162,7 @@ class RoomControllerTest {
 		when(roomManager.getRoom("ABCDEF")).thenReturn(room);
 		when(roomManager.leaveRoom("ABCDEF", "session-1")).thenReturn(null);
 
-		JoinRoomRequest request = new JoinRoomRequest();
+		LeaveRoomRequest request = new LeaveRoomRequest();
 		request.setCode("ABCDEF");
 		roomController.leaveRoom(request, headerAccessor);
 
