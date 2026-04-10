@@ -10,28 +10,35 @@
         body { font-family: monospace; background: #1a1a2e; color: #e0e0e0; padding: 20px; }
         h1 { color: #e94560; margin-bottom: 20px; }
         h2 { color: #0f3460; background: #e94560; padding: 8px 12px; margin-bottom: 10px; }
+        h3 { color: #a0a0a0; font-size: 11px; margin: 12px 0 6px; text-transform: uppercase; letter-spacing: 1px; }
         .container { display: flex; gap: 20px; flex-wrap: wrap; }
         .panel { background: #16213e; border: 1px solid #0f3460; padding: 15px; width: 350px; }
-        label { display: block; margin: 8px 0 4px; color: #a0a0a0; }
+        .panel.wide { width: 100%; max-width: 740px; }
+        label { display: block; margin: 8px 0 4px; color: #a0a0a0; font-size: 12px; }
         input { width: 100%; padding: 8px; background: #1a1a2e; border: 1px solid #0f3460; color: #e0e0e0; font-family: monospace; }
-        button { padding: 8px 16px; margin: 8px 4px 0 0; border: none; cursor: pointer; font-family: monospace; font-weight: bold; }
+        button { padding: 7px 14px; margin: 4px 4px 0 0; border: none; cursor: pointer; font-family: monospace; font-weight: bold; font-size: 12px; }
         .btn-connect { background: #4ecca3; color: #1a1a2e; }
         .btn-disconnect { background: #e94560; color: white; }
         .btn-action { background: #0f3460; color: white; }
-        button:disabled { opacity: 0.5; cursor: not-allowed; }
-        #log { background: #0d1117; border: 1px solid #0f3460; padding: 10px; height: 300px; overflow-y: auto; font-size: 12px; white-space: pre-wrap; margin-top: 10px; }
-        .log-info { color: #4ecca3; }
-        .log-send { color: #e9c46a; }
+        .btn-err { background: #2a0a0a; color: #ff6b6b; border: 1px solid #7b2d00; }
+        button:disabled { opacity: 0.4; cursor: not-allowed; }
+        #log { background: #0d1117; border: 1px solid #0f3460; padding: 10px; height: 380px; overflow-y: auto; font-size: 12px; white-space: pre-wrap; margin-top: 10px; }
+        .log-info    { color: #4ecca3; }
+        .log-send    { color: #e9c46a; }
         .log-receive { color: #48cae4; }
-        .log-error { color: #e94560; }
-        .status { padding: 4px 8px; font-size: 12px; margin-bottom: 10px; }
+        .log-error   { color: #e94560; }
+        .log-err-event { color: #ff6b6b; font-weight: bold; }
+        .status { padding: 4px 8px; font-size: 12px; margin-bottom: 10px; display: inline-block; }
         .status.connected { background: #4ecca3; color: #1a1a2e; }
         .status.disconnected { background: #e94560; color: white; }
+        hr { border: none; border-top: 1px dashed #0f3460; margin: 10px 0; }
     </style>
 </head>
 <body>
     <h1>KITTEN - Test WebSocket</h1>
     <div class="container">
+
+        <!-- connexion -->
         <div class="panel">
             <h2>Connexion</h2>
             <div id="status" class="status disconnected">Deconnecte</div>
@@ -43,27 +50,46 @@
             </div>
         </div>
 
+        <!-- actions normales -->
         <div class="panel">
             <h2>Room</h2>
             <label>Code de la room</label>
             <input type="text" id="roomCode" placeholder="Ex: ABCDEF">
             <div>
-                <button class="btn-action" id="btnCreate" onclick="createRoom()" disabled>Creer Room</button>
+                <button class="btn-action" id="btnCreate" onclick="createRoom()" disabled>Creer</button>
                 <button class="btn-action" id="btnJoin" onclick="joinRoom()" disabled>Rejoindre</button>
                 <button class="btn-action" id="btnLeave" onclick="leaveRoom()" disabled>Quitter</button>
             </div>
-        </div>
-
-        <div class="panel">
-            <h2>State</h2>
-            <label>JSON a envoyer</label>
+            <hr>
+            <label>State JSON</label>
             <input type="text" id="stateInput" placeholder='{"score": 10, "round": 1}'>
             <div>
                 <button class="btn-action" id="btnState" onclick="sendState()" disabled>Envoyer State</button>
             </div>
         </div>
 
-        <div class="panel" style="width: 100%; max-width: 720px;">
+        <!-- tests erreurs -->
+        <div class="panel">
+            <h2>Tests erreurs</h2>
+
+            <h3>Validation</h3>
+            <button class="btn-err" id="e1" onclick="testErr('create', {username: ''})" disabled>Username vide → VALIDATION_ERROR</button>
+            <button class="btn-err" id="e2" onclick="testErr('create', {username: 'X'})" disabled>Username trop court → VALIDATION_ERROR</button>
+            <button class="btn-err" id="e3" onclick="testErr('create', {username: 'UnNomBeaucoupTropLongPourKitten'})" disabled>Username trop long → VALIDATION_ERROR</button>
+            <button class="btn-err" id="e4" onclick="testErr('join', {code: 'AB', username: 'Test'})" disabled>Code trop court → VALIDATION_ERROR</button>
+            <button class="btn-err" id="e5" onclick="testErr('join', {code: 'ABCDEFGH', username: 'Test'})" disabled>Code trop long → VALIDATION_ERROR</button>
+            <button class="btn-err" id="e6" onclick="testErr('join', {code: 'ABCDEF', username: ''})" disabled>Username vide (join) → VALIDATION_ERROR</button>
+            <button class="btn-err" id="e7" onclick="testErr('state', {code: '', state: {}})" disabled>Code vide (state) → VALIDATION_ERROR</button>
+            <button class="btn-err" id="e8" onclick="testErr('state', {code: 'ABCDEF', state: null})" disabled>State null → VALIDATION_ERROR</button>
+
+            <h3>Erreurs métier</h3>
+            <button class="btn-err" id="e9" onclick="testErr('join', {code: 'ZZZZZZ', username: 'Test'})" disabled>Room inexistante → ROOM_NOT_FOUND</button>
+            <button class="btn-err" id="e10" onclick="testAlreadyInRoomDouble()" disabled>Creer 2x de suite → ALREADY_IN_ROOM</button>
+            <button class="btn-err" id="e11" onclick="testNotInRoom()" disabled>Quitter sans etre dans une room → NOT_IN_ROOM</button>
+        </div>
+
+        <!-- log -->
+        <div class="panel wide">
             <h2>Log</h2>
             <div id="log"></div>
             <button class="btn-action" onclick="document.getElementById('log').innerHTML=''" style="margin-top:8px">Vider</button>
@@ -75,6 +101,8 @@
         let currentRoomCode = null;
         let roomSubscription = null;
 
+        const errBtns = ['e1','e2','e3','e4','e5','e6','e7','e8','e9','e10','e11'];
+
         function log(msg, type = 'info') {
             const el = document.getElementById('log');
             const time = new Date().toLocaleTimeString();
@@ -85,10 +113,9 @@
         function setConnected(connected) {
             document.getElementById('btnConnect').disabled = connected;
             document.getElementById('btnDisconnect').disabled = !connected;
-            document.getElementById('btnCreate').disabled = !connected;
-            document.getElementById('btnJoin').disabled = !connected;
-            document.getElementById('btnLeave').disabled = !connected;
-            document.getElementById('btnState').disabled = !connected;
+            ['btnCreate','btnJoin','btnLeave','btnState'].forEach(id =>
+                document.getElementById(id).disabled = !connected);
+            errBtns.forEach(id => document.getElementById(id).disabled = !connected);
             const status = document.getElementById('status');
             status.className = 'status ' + (connected ? 'connected' : 'disconnected');
             status.textContent = connected ? 'Connecte' : 'Deconnecte';
@@ -97,11 +124,16 @@
         function connect() {
             const ws = new WebSocket('ws://localhost:9999/ws');
             stompClient = Stomp.over(ws);
+            stompClient.debug = null;
             stompClient.connect({}, function () {
                 setConnected(true);
                 log('Connecte au serveur', 'info');
+                stompClient.subscribe('/user/queue/errors', function (message) {
+                    const err = JSON.parse(message.body);
+                    log('⚠ ERREUR [' + err.code + '] ' + err.message, 'err-event');
+                });
             }, function (error) {
-                log('Erreur: ' + error, 'error');
+                log('Erreur connexion: ' + error, 'error');
                 setConnected(false);
             });
         }
@@ -117,44 +149,46 @@
         }
 
         function subscribeToRoom(code) {
-            if (roomSubscription) {
-                roomSubscription.unsubscribe();
-            }
+            if (roomSubscription) roomSubscription.unsubscribe();
             currentRoomCode = code;
             document.getElementById('roomCode').value = code;
             roomSubscription = stompClient.subscribe('/topic/room/' + code, function (message) {
                 const event = JSON.parse(message.body);
                 const players = event.room.players.map(p => p.username + (p.host ? ' (host)' : '')).join(', ');
-                let msg = '[' + event.type + '] Joueurs: ' + players;
-                if (event.type === 'STATE_UPDATED') {
-                    msg += ' | State: ' + JSON.stringify(event.data);
-                }
+                let msg = '[' + event.type + '] ' + players;
+                if (event.type === 'STATE_UPDATED') msg += ' | ' + JSON.stringify(event.data);
+                if (event.type === 'HOST_CHANGED') msg += ' | nouveau host: ' + event.data;
                 log(msg, 'receive');
             });
         }
 
         function createRoom() {
             const username = document.getElementById('username').value;
-            log('Creation de room par ' + username + '...', 'send');
-
-            // S'abonner a un topic temporaire pour recevoir la reponse
+            log('Creation room par ' + username, 'send');
             const tempSub = stompClient.subscribe('/user/queue/room', function (message) {
                 const event = JSON.parse(message.body);
                 log('Room creee: ' + event.room.code, 'receive');
                 subscribeToRoom(event.room.code);
                 tempSub.unsubscribe();
             });
-
-            stompClient.send('/app/room/create', {}, JSON.stringify({ username: username }));
+            stompClient.send('/app/room/create', {}, JSON.stringify({ username }));
         }
 
         function joinRoom() {
             const code = document.getElementById('roomCode').value.toUpperCase();
             const username = document.getElementById('username').value;
-            if (!code) { log('Entre un code de room', 'error'); return; }
-            log('Rejoint la room ' + code + '...', 'send');
+            if (!code) { log('Entre un code', 'error'); return; }
+            log('Rejoint ' + code + ' en tant que ' + username, 'send');
             subscribeToRoom(code);
-            stompClient.send('/app/room/join', {}, JSON.stringify({ code: code, username: username }));
+            stompClient.send('/app/room/join', {}, JSON.stringify({ code, username }));
+        }
+
+        function leaveRoom() {
+            if (!currentRoomCode) { log('Pas dans une room', 'error'); return; }
+            log('Quitte ' + currentRoomCode, 'send');
+            stompClient.send('/app/room/leave', {}, JSON.stringify({ code: currentRoomCode }));
+            if (roomSubscription) { roomSubscription.unsubscribe(); roomSubscription = null; }
+            currentRoomCode = null;
         }
 
         function sendState() {
@@ -163,21 +197,51 @@
             try {
                 const state = JSON.parse(input);
                 log('Envoi state: ' + input, 'send');
-                stompClient.send('/app/room/state', {}, JSON.stringify({ code: currentRoomCode, state: state }));
+                stompClient.send('/app/room/state', {}, JSON.stringify({ code: currentRoomCode, state }));
             } catch (e) {
                 log('JSON invalide', 'error');
             }
         }
 
-        function leaveRoom() {
-            if (!currentRoomCode) { log('Pas dans une room', 'error'); return; }
-            log('Quitte la room ' + currentRoomCode + '...', 'send');
-            stompClient.send('/app/room/leave', {}, JSON.stringify({ code: currentRoomCode }));
-            if (roomSubscription) {
-                roomSubscription.unsubscribe();
-                roomSubscription = null;
+        // envoie une requete volontairement invalide
+        function testErr(action, payload) {
+            log('[TEST] /app/room/' + action + ' → ' + JSON.stringify(payload), 'send');
+            stompClient.send('/app/room/' + action, {}, JSON.stringify(payload));
+        }
+
+        // tente de creer une room alors qu'on est deja dans une
+        function testAlreadyInRoom() {
+            log('[TEST] Creation de room alors que deja dans une...', 'send');
+            const username = document.getElementById('username').value || 'Test';
+            stompClient.send('/app/room/create', {}, JSON.stringify({ username }));
+            stompClient.send('/app/room/create', {}, JSON.stringify({ username }));
+        }
+
+        // tente de quitter une room sans y etre
+        function testNotInRoom() {
+            // on quitte d'abord la room courante si on en a une, puis on essaie de quitter a nouveau
+            if (currentRoomCode) {
+                stompClient.send('/app/room/leave', {}, JSON.stringify({ code: currentRoomCode }));
+                if (roomSubscription) { roomSubscription.unsubscribe(); roomSubscription = null; }
+                currentRoomCode = null;
+                setTimeout(() => {
+                    log('[TEST] Quitter alors qu on n est plus dans aucune room...', 'send');
+                    stompClient.send('/app/room/leave', {}, JSON.stringify({ code: 'FFFFFF' }));
+                }, 300);
+            } else {
+                log('[TEST] Quitter une room sans y etre...', 'send');
+                stompClient.send('/app/room/leave', {}, JSON.stringify({ code: 'FFFFFF' }));
             }
-            currentRoomCode = null;
+        }
+
+        function testAlreadyInRoomDouble() {
+            // on envoie deux create rapidement — le second doit echouer
+            const username = document.getElementById('username').value || 'Test';
+            log('[TEST] Double creation de room...', 'send');
+            stompClient.send('/app/room/create', {}, JSON.stringify({ username }));
+            setTimeout(() => {
+                stompClient.send('/app/room/create', {}, JSON.stringify({ username }));
+            }, 300);
         }
     </script>
 </body>

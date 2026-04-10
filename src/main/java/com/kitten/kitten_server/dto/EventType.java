@@ -14,5 +14,7 @@ public enum EventType {
 	/** L'hôte a changé suite à un départ */
 	HOST_CHANGED,
 	/** L'état partagé du jeu a été mis à jour */
-	STATE_UPDATED
+	STATE_UPDATED,
+	/** Une erreur s'est produite, voir ErrorEvent pour les détails */
+	ERROR
 }

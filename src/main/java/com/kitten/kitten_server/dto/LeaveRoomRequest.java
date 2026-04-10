@@ -5,13 +5,9 @@ import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 @Data
-public class JoinRoomRequest {
+public class LeaveRoomRequest {
 
 	@NotBlank(message = "Le code de la room est obligatoire")
 	@Size(min = 6, max = 6, message = "Le code doit faire exactement 6 caractères")
 	private String code;
-
-	@NotBlank(message = "Le nom d'utilisateur est obligatoire")
-	@Size(min = 2, max = 20, message = "Le nom doit faire entre 2 et 20 caractères")
-	private String username;
 }

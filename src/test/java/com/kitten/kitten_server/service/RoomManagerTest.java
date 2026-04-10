@@ -53,7 +53,7 @@ class RoomManagerTest {
 		Player player = new Player("Bob", "session-2");
 
 		assertThatThrownBy(() -> roomManager.joinRoom("XXXXXX", player))
-				.isInstanceOf(IllegalArgumentException.class);
+				.isInstanceOf(com.kitten.kitten_server.exception.RoomNotFoundException.class);
 	}
 
 	@Test
