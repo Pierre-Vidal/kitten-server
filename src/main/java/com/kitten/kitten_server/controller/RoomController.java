@@ -11,6 +11,7 @@ import org.springframework.validation.annotation.Validated;
 
 import jakarta.validation.Valid;
 
+import com.kitten.kitten_server.dto.ChangeStatusRequest;
 import com.kitten.kitten_server.dto.CreateRoomRequest;
 import com.kitten.kitten_server.dto.EventType;
 import com.kitten.kitten_server.dto.JoinRoomRequest;
@@ -49,7 +50,7 @@ public class RoomController {
 	public void createRoom(@Valid CreateRoomRequest request, SimpMessageHeaderAccessor headerAccessor) {
 		String sessionId = headerAccessor.getSessionId();
 		Player host = new Player(request.getUsername(), sessionId);
-		Room room = roomManager.createRoom(host);
+		Room room = roomManager.createRoom(host, request.getMaxPlayers(), request.isAllowJoinInGame());
 
 		RoomEvent event = new RoomEvent(EventType.ROOM_CREATED, toResponse(room), toPlayerInfo(host));
 		sendToSession(sessionId, "/queue/room", event);
@@ -75,18 +76,27 @@ public class RoomController {
 	@MessageMapping("/room/leave")
 	public void leaveRoom(@Valid LeaveRoomRequest request, SimpMessageHeaderAccessor headerAccessor) {
 		String sessionId = headerAccessor.getSessionId();
-		Room currentRoom = roomManager.getRoom(request.getCode());
-		String oldHostId = currentRoom != null ? currentRoom.getHostId() : null;
+		String oldHostId = roomManager.getRoom(request.getCode()).getHostId();
 		Room room = roomManager.leaveRoom(request.getCode(), sessionId);
 
 		if (room != null) {
 			RoomResponse response = toResponse(room);
 			broadcastToRoom(room.getCode(), new RoomEvent(EventType.PLAYER_LEFT, response, sessionId));
 
-			if (oldHostId != null && !oldHostId.equals(room.getHostId())) {
+			if (!oldHostId.equals(room.getHostId())) {
 				broadcastToRoom(room.getCode(), new RoomEvent(EventType.HOST_CHANGED, response, room.getHostId()));
 			}
 		}
+	}
+
+	/**
+	 * Change le statut de la room (WAITING / IN_GAME) — hôte seulement
+	 */
+	@MessageMapping("/room/status")
+	public void changeStatus(@Valid ChangeStatusRequest request, SimpMessageHeaderAccessor headerAccessor) {
+		String sessionId = headerAccessor.getSessionId();
+		Room room = roomManager.changeStatus(request.getCode(), sessionId, request.getStatus());
+		broadcastToRoom(room.getCode(), new RoomEvent(EventType.STATUS_CHANGED, toResponse(room), request.getStatus()));
 	}
 
 	/**
@@ -122,7 +132,7 @@ public class RoomController {
 		List<RoomResponse.PlayerInfo> players = room.getPlayers().values().stream()
 				.map(this::toPlayerInfo)
 				.toList();
-		return new RoomResponse(room.getCode(), players, room.getHostId(), room.getState());
+		return new RoomResponse(room.getCode(), players, room.getHostId(), room.getState(), room.getMaxPlayers(), room.getStatus(), room.isAllowJoinInGame());
 	}
 
 	private RoomResponse.PlayerInfo toPlayerInfo(Player player) {

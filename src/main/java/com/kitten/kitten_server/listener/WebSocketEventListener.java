@@ -63,6 +63,6 @@ public class WebSocketEventListener {
 		List<RoomResponse.PlayerInfo> players = room.getPlayers().values().stream()
 				.map(p -> new RoomResponse.PlayerInfo(p.getId(), p.getUsername(), p.isHost()))
 				.toList();
-		return new RoomResponse(room.getCode(), players, room.getHostId(), room.getState());
+		return new RoomResponse(room.getCode(), players, room.getHostId(), room.getState(), room.getMaxPlayers(), room.getStatus(), room.isAllowJoinInGame());
 	}
 }

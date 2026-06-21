@@ -3,6 +3,7 @@ package com.kitten.kitten_server.model;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import com.kitten.kitten_server.exception.RoomFullException;
 import lombok.Getter;
 
 /**
@@ -14,6 +15,8 @@ import lombok.Getter;
  */
 @Getter
 public class Room {
+
+	private static final int DEFAULT_MAX_PLAYERS = 8;
 
 	/** Code court à 6 lettres pour rejoindre la room */
 	private final String code;
@@ -27,17 +30,37 @@ public class Room {
 	/** État partagé du jeu, libre format (scores, round, etc.) */
 	private final Map<String, Object> state;
 
+	/** Nombre max de joueurs autorisés dans la room */
+	private final int maxPlayers;
+
+	/** Statut de la room : WAITING ou IN_GAME */
+	private RoomStatus status;
+
+	/** Si true, les nouveaux joueurs peuvent rejoindre même si IN_GAME */
+	private final boolean allowJoinInGame;
+
 	public Room(String code) {
+		this(code, DEFAULT_MAX_PLAYERS, false);
+	}
+
+	public Room(String code, int maxPlayers, boolean allowJoinInGame) {
 		this.code = code;
+		this.maxPlayers = maxPlayers;
+		this.allowJoinInGame = allowJoinInGame;
 		this.players = new ConcurrentHashMap<>();
 		this.state = new ConcurrentHashMap<>();
+		this.status = RoomStatus.WAITING;
 	}
 
 	/**
 	 * Ajoute un joueur dans la room
 	 * Le premier joueur ajouté devient automatiquement l'hôte
+	 * @throws RoomFullException si la room est pleine
 	 */
 	public void addPlayer(Player player) {
+		if (players.size() >= maxPlayers) {
+			throw new RoomFullException(maxPlayers);
+		}
 		if (players.isEmpty()) {
 			player.setHost(true);
 			this.hostId = player.getSessionId();
@@ -66,6 +89,10 @@ public class Room {
 	 */
 	public void updateState(Map<String, Object> newState) {
 		state.putAll(newState);
+	}
+
+	public void setStatus(RoomStatus status) {
+		this.status = status;
 	}
 
 	public int getPlayerCount() {

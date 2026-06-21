@@ -21,6 +21,7 @@ import org.mockito.quality.Strictness;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 
+import com.kitten.kitten_server.dto.ChangeStatusRequest;
 import com.kitten.kitten_server.dto.CreateRoomRequest;
 import com.kitten.kitten_server.dto.EventType;
 import com.kitten.kitten_server.dto.JoinRoomRequest;
@@ -29,6 +30,7 @@ import com.kitten.kitten_server.dto.RoomEvent;
 import com.kitten.kitten_server.dto.StateUpdateRequest;
 import com.kitten.kitten_server.model.Player;
 import com.kitten.kitten_server.model.Room;
+import com.kitten.kitten_server.model.RoomStatus;
 import com.kitten.kitten_server.service.RoomManager;
 
 // [C2.2.2] Tests unitaires du contrôleur avec Mockito — vérifient les broadcasts et events sans démarrer le serveur
@@ -64,7 +66,7 @@ class RoomControllerTest {
 
 	@Test
 	void createRoomEnvoieEventAuHostEtBroadcast() {
-		when(roomManager.createRoom(any(Player.class))).thenReturn(room);
+		when(roomManager.createRoom(any(Player.class), any(), any(Boolean.class))).thenReturn(room);
 
 		CreateRoomRequest request = new CreateRoomRequest();
 		request.setUsername("Alice");
@@ -78,7 +80,7 @@ class RoomControllerTest {
 
 	@Test
 	void createRoomEnvoieEventDeTypeROOM_CREATED() {
-		when(roomManager.createRoom(any(Player.class))).thenReturn(room);
+		when(roomManager.createRoom(any(Player.class), any(), any(Boolean.class))).thenReturn(room);
 
 		CreateRoomRequest request = new CreateRoomRequest();
 		request.setUsername("Alice");
@@ -196,6 +198,20 @@ class RoomControllerTest {
 		roomController.updateState(request, headerAccessor);
 
 		verify(messagingTemplate, never()).convertAndSend(anyString(), any(Object.class));
+	}
+
+	@Test
+	void changeStatusBroadcasteSTATUS_CHANGED() {
+		when(roomManager.changeStatus("ABCDEF", "session-1", RoomStatus.IN_GAME)).thenReturn(room);
+
+		ChangeStatusRequest request = new ChangeStatusRequest();
+		request.setCode("ABCDEF");
+		request.setStatus(RoomStatus.IN_GAME);
+		roomController.changeStatus(request, headerAccessor);
+
+		verify(messagingTemplate).convertAndSend(
+				eq("/topic/room/ABCDEF"),
+				argMatchingType(EventType.STATUS_CHANGED));
 	}
 
 	private RoomEvent argMatchingType(EventType expectedType) {

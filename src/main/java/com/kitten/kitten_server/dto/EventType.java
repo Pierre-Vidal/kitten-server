@@ -15,6 +15,8 @@ public enum EventType {
 	HOST_CHANGED,
 	/** L'état partagé du jeu a été mis à jour */
 	STATE_UPDATED,
+	/** Le statut de la room a changé (WAITING / IN_GAME) */
+	STATUS_CHANGED,
 	/** Une erreur s'est produite, voir ErrorEvent pour les détails */
 	ERROR
 }

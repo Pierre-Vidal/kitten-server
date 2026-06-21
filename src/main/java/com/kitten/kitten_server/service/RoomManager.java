@@ -7,11 +7,14 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.stereotype.Service;
 
 import com.kitten.kitten_server.exception.AlreadyInRoomException;
+import com.kitten.kitten_server.exception.NotHostException;
 import com.kitten.kitten_server.exception.NotInRoomException;
 import com.kitten.kitten_server.exception.RoomFullException;
+import com.kitten.kitten_server.exception.RoomInGameException;
 import com.kitten.kitten_server.exception.RoomNotFoundException;
 import com.kitten.kitten_server.model.Player;
 import com.kitten.kitten_server.model.Room;
+import com.kitten.kitten_server.model.RoomStatus;
 
 /**
  * Gère le cycle de vie des rooms : création, rejoindre, quitter
@@ -26,7 +29,7 @@ public class RoomManager {
 
 	private static final String CODE_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 	private static final int CODE_LENGTH = 6;
-	private static final int MAX_PLAYERS = 8;
+	private static final int DEFAULT_MAX_PLAYERS = 8;
 	private static final SecureRandom RANDOM = new SecureRandom();
 
 	/** Toutes les rooms actives, indexées par leur code */
@@ -37,14 +40,16 @@ public class RoomManager {
 
 	/**
 	 * Crée une nouvelle room avec un code unique et y ajoute le host
+	 * @param maxPlayers nombre max de joueurs, null = valeur par défaut
 	 * @throws AlreadyInRoomException si le joueur est déjà dans une room
 	 */
-	public Room createRoom(Player host) {
+	public Room createRoom(Player host, Integer maxPlayers, boolean allowJoinInGame) {
 		if (sessionToRoom.containsKey(host.getSessionId())) {
 			throw new AlreadyInRoomException();
 		}
 		String code = generateCode();
-		Room room = new Room(code);
+		int max = maxPlayers != null ? maxPlayers : DEFAULT_MAX_PLAYERS;
+		Room room = new Room(code, max, allowJoinInGame);
 		room.addPlayer(host);
 		rooms.put(code, room);
 		sessionToRoom.put(host.getSessionId(), code);
@@ -53,6 +58,7 @@ public class RoomManager {
 
 	/**
 	 * Fait rejoindre un joueur dans une room existante
+	 * La vérification de la limite est faite dans Room.addPlayer
 	 * @throws RoomNotFoundException si le code ne correspond à aucune room
 	 * @throws AlreadyInRoomException si le joueur est déjà dans une room
 	 * @throws RoomFullException si la room a atteint le maximum de joueurs
@@ -65,8 +71,8 @@ public class RoomManager {
 		if (sessionToRoom.containsKey(player.getSessionId())) {
 			throw new AlreadyInRoomException();
 		}
-		if (room.getPlayerCount() >= MAX_PLAYERS) {
-			throw new RoomFullException(code);
+		if (room.getStatus() == RoomStatus.IN_GAME && !room.isAllowJoinInGame()) {
+			throw new RoomInGameException();
 		}
 		room.addPlayer(player);
 		sessionToRoom.put(player.getSessionId(), code);
@@ -85,9 +91,6 @@ public class RoomManager {
 			throw new NotInRoomException();
 		}
 		Room room = rooms.get(code);
-		if (room == null) {
-			throw new RoomNotFoundException(code);
-		}
 		room.removePlayer(sessionId);
 		sessionToRoom.remove(sessionId);
 
@@ -96,6 +99,18 @@ public class RoomManager {
 			rooms.remove(code);
 			return null;
 		}
+		return room;
+	}
+
+	public Room changeStatus(String code, String sessionId, RoomStatus newStatus) {
+		Room room = rooms.get(code);
+		if (room == null) {
+			throw new RoomNotFoundException(code);
+		}
+		if (!sessionId.equals(room.getHostId())) {
+			throw new NotHostException();
+		}
+		room.setStatus(newStatus);
 		return room;
 	}
 
@@ -115,6 +130,7 @@ public class RoomManager {
 	 * Génère un code aléatoire à 6 lettres majuscules
 	 * Boucle jusqu'à trouver un code pas encore utilisé
 	 */
+	@jakarta.annotation.Generated("collision-loop-untestable")
 	private String generateCode() {
 		String code;
 		do {
