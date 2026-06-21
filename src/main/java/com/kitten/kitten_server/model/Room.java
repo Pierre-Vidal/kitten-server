@@ -91,6 +91,10 @@ public class Room {
 		state.putAll(newState);
 	}
 
+	public void clearState() {
+		state.clear();
+	}
+
 	public void setStatus(RoomStatus status) {
 		this.status = status;
 	}

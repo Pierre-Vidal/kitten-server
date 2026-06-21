@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import com.kitten.kitten_server.exception.AlreadyInRoomException;
 import com.kitten.kitten_server.exception.NotHostException;
 import com.kitten.kitten_server.exception.NotInRoomException;
+import com.kitten.kitten_server.exception.PlayerNotFoundException;
 import com.kitten.kitten_server.exception.RoomFullException;
 import com.kitten.kitten_server.exception.RoomInGameException;
 import com.kitten.kitten_server.exception.RoomNotFoundException;
@@ -111,6 +112,34 @@ public class RoomManager {
 			throw new NotHostException();
 		}
 		room.setStatus(newStatus);
+		return room;
+	}
+
+	public Room kickPlayer(String code, String hostSessionId, String targetSessionId) {
+		Room room = rooms.get(code);
+		if (room == null) {
+			throw new RoomNotFoundException(code);
+		}
+		if (!hostSessionId.equals(room.getHostId())) {
+			throw new NotHostException();
+		}
+		if (!room.getPlayers().containsKey(targetSessionId)) {
+			throw new PlayerNotFoundException(targetSessionId);
+		}
+		room.removePlayer(targetSessionId);
+		sessionToRoom.remove(targetSessionId);
+		return room;
+	}
+
+	public Room resetState(String code, String sessionId) {
+		Room room = rooms.get(code);
+		if (room == null) {
+			throw new RoomNotFoundException(code);
+		}
+		if (!sessionId.equals(room.getHostId())) {
+			throw new NotHostException();
+		}
+		room.clearState();
 		return room;
 	}
 

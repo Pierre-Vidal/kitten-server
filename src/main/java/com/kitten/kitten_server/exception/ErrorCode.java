@@ -12,5 +12,6 @@ public enum ErrorCode {
 	NOT_IN_ROOM,
 	ROOM_IN_GAME,
 	NOT_HOST,
+	PLAYER_NOT_FOUND,
 	INTERNAL_ERROR
 }

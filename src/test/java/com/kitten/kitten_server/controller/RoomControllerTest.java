@@ -25,7 +25,9 @@ import com.kitten.kitten_server.dto.ChangeStatusRequest;
 import com.kitten.kitten_server.dto.CreateRoomRequest;
 import com.kitten.kitten_server.dto.EventType;
 import com.kitten.kitten_server.dto.JoinRoomRequest;
+import com.kitten.kitten_server.dto.KickRequest;
 import com.kitten.kitten_server.dto.LeaveRoomRequest;
+import com.kitten.kitten_server.dto.ResetStateRequest;
 import com.kitten.kitten_server.dto.RoomEvent;
 import com.kitten.kitten_server.dto.StateUpdateRequest;
 import com.kitten.kitten_server.model.Player;
@@ -212,6 +214,35 @@ class RoomControllerTest {
 		verify(messagingTemplate).convertAndSend(
 				eq("/topic/room/ABCDEF"),
 				argMatchingType(EventType.STATUS_CHANGED));
+	}
+
+	@Test
+	void kickPlayerEnvoieKICKEDAuJoueurEtPLAYER_LEFTALaRoom() {
+		Player bob = new Player("Bob", "session-2");
+		room.addPlayer(bob);
+		when(roomManager.kickPlayer("ABCDEF", "session-1", "session-2")).thenAnswer(inv -> {
+			room.removePlayer("session-2");
+			return room;
+		});
+
+		KickRequest request = new KickRequest();
+		request.setCode("ABCDEF");
+		request.setTargetSessionId("session-2");
+		roomController.kickPlayer(request, headerAccessor);
+
+		verify(messagingTemplate).convertAndSendToUser(eq("session-2"), eq("/queue/room"), (Object) argMatchingType(EventType.KICKED), any(java.util.Map.class));
+		verify(messagingTemplate).convertAndSend(eq("/topic/room/ABCDEF"), argMatchingType(EventType.PLAYER_LEFT));
+	}
+
+	@Test
+	void resetStateBroadcasteSTATE_RESET() {
+		when(roomManager.resetState("ABCDEF", "session-1")).thenReturn(room);
+
+		ResetStateRequest request = new ResetStateRequest();
+		request.setCode("ABCDEF");
+		roomController.resetState(request, headerAccessor);
+
+		verify(messagingTemplate).convertAndSend(eq("/topic/room/ABCDEF"), argMatchingType(EventType.STATE_RESET));
 	}
 
 	private RoomEvent argMatchingType(EventType expectedType) {

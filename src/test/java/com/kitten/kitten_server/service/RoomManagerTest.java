@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import com.kitten.kitten_server.exception.AlreadyInRoomException;
 import com.kitten.kitten_server.exception.NotHostException;
 import com.kitten.kitten_server.exception.NotInRoomException;
+import com.kitten.kitten_server.exception.PlayerNotFoundException;
 import com.kitten.kitten_server.exception.RoomInGameException;
 import com.kitten.kitten_server.exception.RoomNotFoundException;
 import com.kitten.kitten_server.model.Player;
@@ -247,5 +248,75 @@ class RoomManagerTest {
 		Room room = roomManager.createRoom(host, 4, false);
 
 		assertThat(room.getMaxPlayers()).isEqualTo(4);
+	}
+
+	@Test
+	void kickPlayerRetireLeJoueur() {
+		Player host = new Player("Alice", "session-1");
+		Player bob = new Player("Bob", "session-2");
+		Room room = roomManager.createRoom(host, null, false);
+		roomManager.joinRoom(room.getCode(), bob);
+
+		roomManager.kickPlayer(room.getCode(), "session-1", "session-2");
+
+		assertThat(room.getPlayers()).doesNotContainKey("session-2");
+		assertThat(roomManager.getRoomCodeBySession("session-2")).isNull();
+	}
+
+	@Test
+	void kickPlayerLanceExceptionSiPasHost() {
+		Player host = new Player("Alice", "session-1");
+		Player bob = new Player("Bob", "session-2");
+		Room room = roomManager.createRoom(host, null, false);
+		roomManager.joinRoom(room.getCode(), bob);
+		String code = room.getCode();
+
+		assertThatThrownBy(() -> roomManager.kickPlayer(code, "session-2", "session-1"))
+				.isInstanceOf(NotHostException.class);
+	}
+
+	@Test
+	void kickPlayerLanceExceptionSiJoueurIntrouvable() {
+		Player host = new Player("Alice", "session-1");
+		Room room = roomManager.createRoom(host, null, false);
+		String code = room.getCode();
+
+		assertThatThrownBy(() -> roomManager.kickPlayer(code, "session-1", "session-inconnu"))
+				.isInstanceOf(PlayerNotFoundException.class);
+	}
+
+	@Test
+	void kickPlayerLanceExceptionSiRoomInexistante() {
+		assertThatThrownBy(() -> roomManager.kickPlayer("XXXXXX", "session-1", "session-2"))
+				.isInstanceOf(RoomNotFoundException.class);
+	}
+
+	@Test
+	void resetStateVideLeState() {
+		Player host = new Player("Alice", "session-1");
+		Room room = roomManager.createRoom(host, null, false);
+		room.updateState(java.util.Map.of("score", 10, "round", 2));
+
+		roomManager.resetState(room.getCode(), "session-1");
+
+		assertThat(room.getState()).isEmpty();
+	}
+
+	@Test
+	void resetStateLanceExceptionSiPasHost() {
+		Player host = new Player("Alice", "session-1");
+		Player bob = new Player("Bob", "session-2");
+		Room room = roomManager.createRoom(host, null, false);
+		roomManager.joinRoom(room.getCode(), bob);
+		String code = room.getCode();
+
+		assertThatThrownBy(() -> roomManager.resetState(code, "session-2"))
+				.isInstanceOf(NotHostException.class);
+	}
+
+	@Test
+	void resetStateLanceExceptionSiRoomInexistante() {
+		assertThatThrownBy(() -> roomManager.resetState("XXXXXX", "session-1"))
+				.isInstanceOf(RoomNotFoundException.class);
 	}
 }

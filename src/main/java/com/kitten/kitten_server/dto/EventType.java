@@ -17,6 +17,10 @@ public enum EventType {
 	STATE_UPDATED,
 	/** Le statut de la room a changé (WAITING / IN_GAME) */
 	STATUS_CHANGED,
+	/** Un joueur a été expulsé par l'hôte */
+	KICKED,
+	/** L'état partagé du jeu a été remis à zéro */
+	STATE_RESET,
 	/** Une erreur s'est produite, voir ErrorEvent pour les détails */
 	ERROR
 }

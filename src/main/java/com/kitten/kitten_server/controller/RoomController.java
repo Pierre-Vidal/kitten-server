@@ -13,6 +13,8 @@ import jakarta.validation.Valid;
 
 import com.kitten.kitten_server.dto.ChangeStatusRequest;
 import com.kitten.kitten_server.dto.CreateRoomRequest;
+import com.kitten.kitten_server.dto.KickRequest;
+import com.kitten.kitten_server.dto.ResetStateRequest;
 import com.kitten.kitten_server.dto.EventType;
 import com.kitten.kitten_server.dto.JoinRoomRequest;
 import com.kitten.kitten_server.dto.LeaveRoomRequest;
@@ -97,6 +99,29 @@ public class RoomController {
 		String sessionId = headerAccessor.getSessionId();
 		Room room = roomManager.changeStatus(request.getCode(), sessionId, request.getStatus());
 		broadcastToRoom(room.getCode(), new RoomEvent(EventType.STATUS_CHANGED, toResponse(room), request.getStatus()));
+	}
+
+	/**
+	 * Expulse un joueur de la room — hôte seulement
+	 * Le joueur reçoit un event KICKED sur sa queue personnelle, la room reçoit PLAYER_LEFT
+	 */
+	@MessageMapping("/room/kick")
+	public void kickPlayer(@Valid KickRequest request, SimpMessageHeaderAccessor headerAccessor) {
+		String sessionId = headerAccessor.getSessionId();
+		Room room = roomManager.kickPlayer(request.getCode(), sessionId, request.getTargetSessionId());
+		RoomResponse response = toResponse(room);
+		sendToSession(request.getTargetSessionId(), "/queue/room", new RoomEvent(EventType.KICKED, response, request.getTargetSessionId()));
+		broadcastToRoom(room.getCode(), new RoomEvent(EventType.PLAYER_LEFT, response, request.getTargetSessionId()));
+	}
+
+	/**
+	 * Remet à zéro l'état partagé de la room — hôte seulement
+	 */
+	@MessageMapping("/room/reset")
+	public void resetState(@Valid ResetStateRequest request, SimpMessageHeaderAccessor headerAccessor) {
+		String sessionId = headerAccessor.getSessionId();
+		Room room = roomManager.resetState(request.getCode(), sessionId);
+		broadcastToRoom(room.getCode(), new RoomEvent(EventType.STATE_RESET, toResponse(room), null));
 	}
 
 	/**
